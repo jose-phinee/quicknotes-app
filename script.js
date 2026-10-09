@@ -2,12 +2,28 @@
 const form = document.querySelector("#note-form");
 const noteInput = document.querySelector("#note-input");
 const categorySelect = document.querySelector("#note-category");
+const searchInput = document.querySelector("#search-input");
 const notesList = document.querySelector("#notes-list");
 const noteCount = document.querySelector("#note-count");
 const errorMessage = document.querySelector("#error-message");
 
 // ---------- Data ----------
-let notes = [];
+const STORAGE_KEY = "quicknotes-notes";
+let notes = loadNotes();
+
+// ---------- Storage ----------
+function saveNotes() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
+}
+
+function loadNotes() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    return Array.isArray(saved) ? saved : [];
+  } catch (error) {
+    return [];
+  }
+}
 
 // ---------- Count message ----------
 function getCountMessage() {
@@ -25,7 +41,20 @@ function render() {
   notesList.replaceChildren();
   noteCount.textContent = getCountMessage();
 
-  notes.forEach(function (note) {
+  const term = searchInput.value.trim().toLowerCase();
+  const visibleNotes = notes.filter(function (note) {
+    return note.text.toLowerCase().includes(term);
+  });
+
+  if (notes.length > 0 && visibleNotes.length === 0) {
+    const empty = document.createElement("li");
+    empty.textContent = "No notes match your search.";
+    empty.classList.add("empty-message");
+    notesList.appendChild(empty);
+    return;
+  }
+
+  visibleNotes.forEach(function (note) {
     const item = document.createElement("li");
     item.classList.add("note-card", `category-${note.category}`);
 
@@ -66,6 +95,7 @@ function addNote(text, category) {
     createdAt: new Date().toLocaleString(),
   };
   notes.push(note);
+  saveNotes();
   render();
 }
 
@@ -74,6 +104,7 @@ function deleteNote(id) {
   notes = notes.filter(function (note) {
     return note.id !== id;
   });
+  saveNotes();
   render();
 }
 
@@ -97,4 +128,7 @@ form.addEventListener("submit", function (event) {
   noteInput.focus();
 });
 
+searchInput.addEventListener("input", render);
+
+// ---------- Start ----------
 render();
